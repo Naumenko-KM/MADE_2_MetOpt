@@ -73,17 +73,16 @@ class LogRegL2Oracle(BaseSmoothOracle):
         self.matmat_ATsA = matmat_ATsA
         self.b = b
         self.regcoef = regcoef
-        self.m = b.shape[0]
 
     def func(self, x):
-        exp = np.exp(-self.b * self.matvec_ATx(x))
-        res = 1 / self.m * np.sum(np.log(1 + exp)) \
-            + self.regcoef * np.linalg.norm(x, 2)
+        exps = np.exp(-self.b * self.matvec_Ax(x))
+        res = np.mean(np.log(1 + exps)) \
+            + self.regcoef / 2 * np.linalg.norm(x, 2) ** 2
         return res
 
     def grad(self, x):
         exp = np.exp(-self.b * self.matvec_ATx(x))
-        res = 1 / self.m * np.sum(exp * self.b.T @ )
+        # res = np.mean(exp * self.b.T @ )
 
 
 def create_log_reg_oracle(A, b, regcoef):
@@ -91,11 +90,18 @@ def create_log_reg_oracle(A, b, regcoef):
     Auxiliary function for creating logistic regression oracles.
         `oracle_type` must be either 'usual' or 'optimized'
     """
-    matvec_Ax = lambda x: A @ x  # your code here
-    matvec_ATx = lambda x: A.T @ x  # your code here
+    print('a:', A.shape, 'b:', b.shape)
+    print('at:', A.T.shape)
+
+    def matvec_Ax(x):
+        return A.dot(x)  # your code here
+
+    def matvec_ATx(x):
+        print('x:', x.shape)
+        return A.T.dot(x)  # your code here
 
     def matmat_ATsA(s):
         # your code here
-        return None
+        return A.T @ s @ A
 
     return LogRegL2Oracle(matvec_Ax, matvec_ATx, matmat_ATsA, b, regcoef)

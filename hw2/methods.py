@@ -75,8 +75,10 @@ class LineSearchTool(object):
             return self.c
         elif self._method == 'Armijo':
             # your code here
+            pass
         elif self._method == 'Wolfe':
             # your code here
+            pass
 
 
 def get_line_search_tool(line_search_options=None):
