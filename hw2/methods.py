@@ -1,3 +1,4 @@
+from time import time
 import numpy as np
 import scipy
 from collections import defaultdict
@@ -74,11 +75,34 @@ class LineSearchTool(object):
         if self._method == 'Constant':
             return self.c
         elif self._method == 'Armijo':
-            # your code here
-            pass
+            if previous_alpha:
+                alpha = previous_alpha
+            else:
+                alpha = self.alpha_0
+
+            f_xs = oracle.func_directional(x_k, d_k, alpha)
+            f_x = oracle.func(x_k)
+            f_grad = oracle.grad_directional(x_k, d_k, 0)
+            while f_xs - f_x > self.c1 * alpha * f_grad:
+                alpha = alpha * 0.5
+                f_xs = oracle.func_directional(x_k, d_k, alpha)
+            return alpha
+
         elif self._method == 'Wolfe':
-            # your code here
-            pass
+            def phi(alpha):
+                return oracle.func_directional(x_k, d_k, alpha)
+
+            def derphi(alpha):
+                return oracle.grad_directional(x_k, d_k, alpha)
+
+            alpha = scalar_search_wolfe2(phi=phi, derphi=derphi,
+                                         phi0=phi(0), derphi0=derphi(0),
+                                         c1=self.c1, c2=self.c2)
+            alpha = alpha[0]
+            if alpha is None:
+                self.__init__(method='Armijo', c1=self.c1)
+                alpha = self.line_search(oracle, x_k, d_k, self.alpha_0)
+            return alpha
 
 
 def get_line_search_tool(line_search_options=None):
@@ -94,7 +118,7 @@ def get_line_search_tool(line_search_options=None):
 class GradientDescent(object):
     """
     Gradient descent optimization algorithm.
-    
+
     oracle : BaseSmoothOracle-descendant object
         Oracle with .func() and .grad() methods implemented for computing
         function value and its gradient respectively.
@@ -128,4 +152,36 @@ class GradientDescent(object):
             - self.hist['x'] : list of np.arrays, containing the trajectory of the algorithm. ONLY STORE IF x.size <= 2
             - self.hist['x_star']: np.array containing x at last iteration
         """
-        # your code here
+        x_k = self.x_0
+        grad_x0_norm = np.linalg.norm(self.oracle.grad(x_k), 2)
+        previous_alpha = None
+        start_time = time()
+        self.hist['time'] = [0]
+        self.hist['func'].append(self.oracle.func(x_k))
+        self.hist['grad_norm'].append(grad_x0_norm)
+        if self.x_0.shape[0] <= 2:
+            self.hist['x'].append(x_k)
+
+        for _ in range(max_iter):
+            d_k = -self.oracle.grad(x_k)
+            grad_xk_norm = np.linalg.norm(d_k, 2)
+            criterion = grad_xk_norm ** 2 / grad_x0_norm ** 2
+
+            if criterion <= self.tolerance:
+                break
+
+            if previous_alpha:
+                alpha = self.line_search_tool.line_search(self.oracle, x_k, d_k, previous_alpha)
+            else:
+                alpha = self.line_search_tool.line_search(self.oracle, x_k, d_k)
+            x_k = x_k + alpha * d_k
+            previous_alpha = alpha * 2
+
+            self.hist['func'].append(self.oracle.func(x_k))
+            self.hist['grad_norm'].append(np.linalg.norm(self.oracle.grad(x_k), 2))
+            if self.x_0.shape[0] <= 2:
+                self.hist['x'].append(x_k)
+            self.hist['time'].append(time() - start_time)
+
+        self.hist['x_star'] = x_k
+

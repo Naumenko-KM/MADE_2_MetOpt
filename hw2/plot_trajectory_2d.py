@@ -35,7 +35,7 @@ def plot_levels(func, xrange=None, yrange=None, levels=None):
 
     colors = np.vstack([COLOR_RED, COLOR_GREEN, COLOR_BLUE]).T
     my_cmap = ListedColormap(colors)
-    
+
     _ = plt.contourf(X, Y, Z, levels=levels, cmap=my_cmap)
     CS = plt.contour(X, Y, Z, levels=levels, colors='#ABBECC')
     plt.clabel(CS, inline=1, fontsize=8, colors='#AAAEBB') 

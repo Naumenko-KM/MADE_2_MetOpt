@@ -81,8 +81,11 @@ class LogRegL2Oracle(BaseSmoothOracle):
         return res
 
     def grad(self, x):
-        exp = np.exp(-self.b * self.matvec_ATx(x))
-        # res = np.mean(exp * self.b.T @ )
+        exps = np.exp(-self.b * self.matvec_Ax(x))
+        n = self.b.shape[0]
+        res = self.matvec_ATx((exps / (1 + exps)) * (-self.b)) / n \
+            + self.regcoef * x
+        return res
 
 
 def create_log_reg_oracle(A, b, regcoef):
@@ -90,18 +93,15 @@ def create_log_reg_oracle(A, b, regcoef):
     Auxiliary function for creating logistic regression oracles.
         `oracle_type` must be either 'usual' or 'optimized'
     """
-    print('a:', A.shape, 'b:', b.shape)
-    print('at:', A.T.shape)
 
     def matvec_Ax(x):
-        return A.dot(x)  # your code here
+        return A.dot(x)
 
     def matvec_ATx(x):
-        print('x:', x.shape)
-        return A.T.dot(x)  # your code here
+        return A.T.dot(x)
 
     def matmat_ATsA(s):
-        # your code here
-        return A.T @ s @ A
+        # Задание 2.3 не делал, поэтому метод не реализовал
+        pass
 
     return LogRegL2Oracle(matvec_Ax, matvec_ATx, matmat_ATsA, b, regcoef)
